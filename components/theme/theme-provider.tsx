@@ -1,43 +1,39 @@
-"use client"
+import { MongoClient, type Db } from "mongodb"
 
-import type { ReactElement } from "react"
-import { ThemeProvider as NextThemesProvider } from "next-themes"
-import type { ThemeProviderProps } from "next-themes"
-
-import { createContext, useContext, useEffect, useState } from "react"
-
-type Theme = "dark" | "light" | "system"
-
-type ThemeProviderState = {
-  theme: Theme
-  setTheme: (theme: Theme) => void
+if (!process.env.MONGODB_URI) {
+  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
 }
 
-const initialState: ThemeProviderState = {
-  theme: "system",
-  setTheme: () => null,
-}
+const uri = process.env.MONGODB_URI
+const options = {}
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
+let client: MongoClient
+let clientPromise: Promise<MongoClient>
 
-export function ThemeProvider({ children, ...props }: ThemeProviderProps): ReactElement {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
-    return <>{children}</>
+if (process.env.NODE_ENV === "development") {
+  const globalWithMongo = global as typeof globalThis & {
+    _mongoClientPromise?: Promise<MongoClient>
   }
 
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
+  if (!globalWithMongo._mongoClientPromise) {
+    client = new MongoClient(uri, options)
+    globalWithMongo._mongoClientPromise = client.connect()
+  }
+  clientPromise = globalWithMongo._mongoClientPromise
+} else {
+  client = new MongoClient(uri, options)
+  clientPromise = client.connect()
 }
 
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext)
+export default clientPromise
 
-  if (context === undefined) throw new Error("useTheme must be used within a ThemeProvider")
+export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
+  const client = await clientPromise
+  const db = client.db("ocexchange")
+  return { client, db }
+}
 
-  return context
+export async function getDatabase(): Promise<Db> {
+  const client = await clientPromise
+  return client.db("ocexchange")
 }

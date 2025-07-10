@@ -21,20 +21,27 @@ export interface User {
 
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 12
-  return bcrypt.hash(password, saltRounds)
+  console.log("Hashing password with salt rounds:", saltRounds)
+  const hashed = await bcrypt.hash(password, saltRounds)
+  console.log("Password hashed successfully, length:", hashed.length)
+  return hashed
 }
 
 export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  console.log("Verifying password...")
+  console.log("=== PASSWORD VERIFICATION ===")
+  console.log("Plain password:", password)
   console.log("Plain password length:", password.length)
+  console.log("Hashed password:", hashedPassword.substring(0, 20) + "...")
   console.log("Hashed password length:", hashedPassword.length)
 
   try {
     const isValid = await bcrypt.compare(password, hashedPassword)
     console.log("Password verification result:", isValid)
+    console.log("=== END PASSWORD VERIFICATION ===")
     return isValid
   } catch (error) {
     console.error("Password verification error:", error)
+    console.log("=== END PASSWORD VERIFICATION (ERROR) ===")
     return false
   }
 }
@@ -73,6 +80,7 @@ export async function getUserById(userId: string): Promise<User | null> {
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
     const { db } = await connectToDatabase()
+    console.log("=== GET USER BY EMAIL ===")
     console.log("Looking up user with email:", email)
 
     const user = (await db.collection("users").findOne({ email })) as User | null
@@ -85,8 +93,10 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         name: user.name,
         hasPassword: !!user.password,
         passwordLength: user.password?.length,
+        passwordStart: user.password?.substring(0, 10) + "...",
       })
     }
+    console.log("=== END GET USER BY EMAIL ===")
 
     return user
   } catch (error) {
@@ -106,11 +116,15 @@ export async function authenticateUser(
   error?: string
 }> {
   try {
+    console.log("=== AUTHENTICATION START ===")
     console.log("Authenticating user:", email)
+    console.log("Password provided:", !!password)
+    console.log("Password length:", password?.length)
 
     const user = await getUserByEmail(email)
     if (!user) {
       console.log("User not found")
+      console.log("=== AUTHENTICATION END (USER NOT FOUND) ===")
       return { success: false, error: "Invalid email or password" }
     }
 
@@ -119,15 +133,16 @@ export async function authenticateUser(
 
     if (!isPasswordValid) {
       console.log("Password verification failed")
+      console.log("=== AUTHENTICATION END (INVALID PASSWORD) ===")
       return { success: false, error: "Invalid email or password" }
     }
 
     if (user.twoFactorEnabled && !twoFactorCode) {
+      console.log("2FA required but not provided")
       return { success: false, error: "Two-factor authentication code required" }
     }
 
     if (user.twoFactorEnabled && twoFactorCode) {
-      // For now, accept any 6-digit code for demo purposes
       if (!/^\d{6}$/.test(twoFactorCode)) {
         return { success: false, error: "Invalid two-factor authentication code" }
       }
@@ -136,6 +151,7 @@ export async function authenticateUser(
     const token = await generateToken(user._id.toString())
 
     console.log("Authentication successful")
+    console.log("=== AUTHENTICATION END (SUCCESS) ===")
     return {
       success: true,
       user,
@@ -143,11 +159,48 @@ export async function authenticateUser(
     }
   } catch (error) {
     console.error("Authentication error:", error)
+    console.log("=== AUTHENTICATION END (ERROR) ===")
     return { success: false, error: "Authentication failed" }
   }
 }
 
-// Dynamic import for speakeasy to avoid SSR issues
+export async function createUser(userData: {
+  name: string
+  email: string
+  password: string
+}): Promise<User> {
+  const { db } = await connectToDatabase()
+
+  console.log("=== CREATE USER ===")
+  console.log("Creating user with email:", userData.email)
+  console.log("Original password:", userData.password)
+  console.log("Original password length:", userData.password.length)
+
+  const hashedPassword = await hashPassword(userData.password)
+  console.log("Password hashed for storage")
+
+  const user: Omit<User, "_id"> = {
+    name: userData.name,
+    email: userData.email,
+    password: hashedPassword,
+    role: "user",
+    isEmailVerified: true,
+    twoFactorEnabled: false,
+    kycStatus: "pending",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const result = await db.collection("users").insertOne(user)
+  console.log("User created with ID:", result.insertedId)
+  console.log("=== END CREATE USER ===")
+
+  return {
+    ...user,
+    _id: result.insertedId,
+  }
+}
+
 export async function generateTwoFactorSecret(): Promise<{ secret: string; qrCode: string }> {
   try {
     const speakeasy = await import("speakeasy")
@@ -184,7 +237,6 @@ export async function verifyTwoFactorToken(secret: string, token: string): Promi
 }
 
 export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-  // This function is imported and used by other modules
   const { sendEmail } = await import("./email")
 
   const subject = "Welcome to OC Exchange!"

@@ -6,10 +6,12 @@ export interface Order {
   userId: string
   symbol: string
   type: "buy" | "sell"
-  orderType: "market" | "limit"
+  orderType: "market" | "limit" | "stop"
   amount: number
   price?: number
-  status: "pending" | "filled" | "cancelled"
+  stopPrice?: number
+  status: "pending" | "filled" | "cancelled" | "partial"
+  filledAmount: number
   createdAt: Date
   updatedAt: Date
 }
@@ -18,11 +20,11 @@ export interface Trade {
   _id?: ObjectId
   buyOrderId: string
   sellOrderId: string
+  buyerId: string
+  sellerId: string
   symbol: string
   amount: number
   price: number
-  buyerId: string
-  sellerId: string
   createdAt: Date
 }
 
@@ -31,7 +33,6 @@ export async function createOrder(orderData: Omit<Order, "_id" | "createdAt" | "
 
   const order: Omit<Order, "_id"> = {
     ...orderData,
-    status: "pending",
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -47,7 +48,9 @@ export async function createOrder(orderData: Omit<Order, "_id" | "createdAt" | "
 export async function getUserOrders(userId: string): Promise<Order[]> {
   const { db } = await connectToDatabase()
 
-  return (await db.collection("orders").find({ userId }).sort({ createdAt: -1 }).limit(50).toArray()) as Order[]
+  const orders = await db.collection("orders").find({ userId }).sort({ createdAt: -1 }).limit(100).toArray()
+
+  return orders as Order[]
 }
 
 export async function getOrderBook(symbol: string): Promise<{
@@ -56,7 +59,7 @@ export async function getOrderBook(symbol: string): Promise<{
 }> {
   const { db } = await connectToDatabase()
 
-  const [buyOrders, sellOrders] = await Promise.all([
+  const [bids, asks] = await Promise.all([
     db
       .collection("orders")
       .find({
@@ -66,7 +69,7 @@ export async function getOrderBook(symbol: string): Promise<{
       })
       .sort({ price: -1 })
       .limit(20)
-      .toArray() as Promise<Order[]>,
+      .toArray(),
     db
       .collection("orders")
       .find({
@@ -76,118 +79,98 @@ export async function getOrderBook(symbol: string): Promise<{
       })
       .sort({ price: 1 })
       .limit(20)
-      .toArray() as Promise<Order[]>,
+      .toArray(),
   ])
 
-  const bids = buyOrders.map((order) => ({
-    price: order.price || 0,
-    amount: order.amount,
-  }))
-
-  const asks = sellOrders.map((order) => ({
-    price: order.price || 0,
-    amount: order.amount,
-  }))
-
-  return { bids, asks }
+  return {
+    bids: bids.map((order: any) => ({
+      price: order.price,
+      amount: order.amount - order.filledAmount,
+    })),
+    asks: asks.map((order: any) => ({
+      price: order.price,
+      amount: order.amount - order.filledAmount,
+    })),
+  }
 }
 
-export async function matchOrders(symbol: string): Promise<Trade[]> {
+export async function matchOrders(newOrder: Order): Promise<Trade[]> {
   const { db } = await connectToDatabase()
-
-  // Get pending buy and sell orders
-  const [buyOrders, sellOrders] = await Promise.all([
-    db
-      .collection("orders")
-      .find({
-        symbol,
-        type: "buy",
-        status: "pending",
-      })
-      .sort({ price: -1, createdAt: 1 })
-      .toArray() as Promise<Order[]>,
-    db
-      .collection("orders")
-      .find({
-        symbol,
-        type: "sell",
-        status: "pending",
-      })
-      .sort({ price: 1, createdAt: 1 })
-      .toArray() as Promise<Order[]>,
-  ])
-
   const trades: Trade[] = []
 
-  for (const buyOrder of buyOrders) {
-    for (const sellOrder of sellOrders) {
-      if (!buyOrder.price || !sellOrder.price) continue
-      if (buyOrder.price < sellOrder.price) break
+  if (newOrder.orderType !== "market" && newOrder.orderType !== "limit") {
+    return trades
+  }
 
-      const tradeAmount = Math.min(buyOrder.amount, sellOrder.amount)
-      const tradePrice = sellOrder.price // Price taker gets
+  const oppositeType = newOrder.type === "buy" ? "sell" : "buy"
+  const priceFilter =
+    newOrder.type === "buy" ? { price: { $lte: newOrder.price } } : { price: { $gte: newOrder.price } }
 
-      // Create trade record
-      const trade: Omit<Trade, "_id"> = {
-        buyOrderId: buyOrder._id!.toString(),
-        sellOrderId: sellOrder._id!.toString(),
-        symbol,
-        amount: tradeAmount,
-        price: tradePrice,
-        buyerId: buyOrder.userId,
-        sellerId: sellOrder.userId,
-        createdAt: new Date(),
-      }
+  const matchingOrders = await db
+    .collection("orders")
+    .find({
+      symbol: newOrder.symbol,
+      type: oppositeType,
+      status: "pending",
+      ...(newOrder.orderType === "limit" ? priceFilter : {}),
+    })
+    .sort({
+      price: newOrder.type === "buy" ? 1 : -1,
+      createdAt: 1,
+    })
+    .toArray()
 
-      const result = await db.collection("trades").insertOne(trade)
-      trades.push({ ...trade, _id: result.insertedId })
+  let remainingAmount = newOrder.amount - newOrder.filledAmount
 
-      // Update order amounts
-      buyOrder.amount -= tradeAmount
-      sellOrder.amount -= tradeAmount
+  for (const matchingOrder of matchingOrders) {
+    if (remainingAmount <= 0) break
 
-      // Update orders in database
-      await Promise.all([
-        db.collection("orders").updateOne(
-          { _id: buyOrder._id },
-          {
-            $set: {
-              amount: buyOrder.amount,
-              status: buyOrder.amount === 0 ? "filled" : "pending",
-              updatedAt: new Date(),
-            },
-          },
-        ),
-        db.collection("orders").updateOne(
-          { _id: sellOrder._id },
-          {
-            $set: {
-              amount: sellOrder.amount,
-              status: sellOrder.amount === 0 ? "filled" : "pending",
-              updatedAt: new Date(),
-            },
-          },
-        ),
-      ])
+    const tradeAmount = Math.min(remainingAmount, matchingOrder.amount - matchingOrder.filledAmount)
+    const tradePrice = matchingOrder.price
 
-      if (sellOrder.amount === 0) break
+    // Create trade record
+    const trade: Omit<Trade, "_id"> = {
+      buyOrderId: newOrder.type === "buy" ? newOrder._id!.toString() : matchingOrder._id.toString(),
+      sellOrderId: newOrder.type === "sell" ? newOrder._id!.toString() : matchingOrder._id.toString(),
+      buyerId: newOrder.type === "buy" ? newOrder.userId : matchingOrder.userId,
+      sellerId: newOrder.type === "sell" ? newOrder.userId : matchingOrder.userId,
+      symbol: newOrder.symbol,
+      amount: tradeAmount,
+      price: tradePrice,
+      createdAt: new Date(),
     }
+
+    const tradeResult = await db.collection("trades").insertOne(trade)
+    trades.push({ ...trade, _id: tradeResult.insertedId })
+
+    // Update orders
+    await Promise.all([
+      db.collection("orders").updateOne(
+        { _id: newOrder._id },
+        {
+          $inc: { filledAmount: tradeAmount },
+          $set: {
+            status: newOrder.filledAmount + tradeAmount >= newOrder.amount ? "filled" : "partial",
+            updatedAt: new Date(),
+          },
+        },
+      ),
+      db.collection("orders").updateOne(
+        { _id: matchingOrder._id },
+        {
+          $inc: { filledAmount: tradeAmount },
+          $set: {
+            status: matchingOrder.filledAmount + tradeAmount >= matchingOrder.amount ? "filled" : "partial",
+            updatedAt: new Date(),
+          },
+        },
+      ),
+    ])
+
+    remainingAmount -= tradeAmount
   }
 
   return trades
-}
-
-export async function getUserTrades(userId: string): Promise<Trade[]> {
-  const { db } = await connectToDatabase()
-
-  return (await db
-    .collection("trades")
-    .find({
-      $or: [{ buyerId: userId }, { sellerId: userId }],
-    })
-    .sort({ createdAt: -1 })
-    .limit(50)
-    .toArray()) as Trade[]
 }
 
 export async function cancelOrder(orderId: string, userId: string): Promise<boolean> {
@@ -197,7 +180,7 @@ export async function cancelOrder(orderId: string, userId: string): Promise<bool
     {
       _id: new ObjectId(orderId),
       userId,
-      status: "pending",
+      status: { $in: ["pending", "partial"] },
     },
     {
       $set: {
@@ -208,4 +191,27 @@ export async function cancelOrder(orderId: string, userId: string): Promise<bool
   )
 
   return result.modifiedCount > 0
+}
+
+export async function getTradeHistory(userId: string): Promise<Trade[]> {
+  const { db } = await connectToDatabase()
+
+  const trades = await db
+    .collection("trades")
+    .find({
+      $or: [{ buyerId: userId }, { sellerId: userId }],
+    })
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .toArray()
+
+  return trades as Trade[]
+}
+
+export async function getMarketTrades(symbol: string): Promise<Trade[]> {
+  const { db } = await connectToDatabase()
+
+  const trades = await db.collection("trades").find({ symbol }).sort({ createdAt: -1 }).limit(50).toArray()
+
+  return trades as Trade[]
 }
