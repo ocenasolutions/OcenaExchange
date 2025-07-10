@@ -7,6 +7,8 @@ export async function POST(request: NextRequest) {
   try {
     const { email, password, twoFactorCode } = await request.json()
 
+    console.log("Login attempt for:", email)
+
     // Validate input
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
@@ -16,13 +18,23 @@ export async function POST(request: NextRequest) {
     const result = await authenticateUser(email, password, twoFactorCode)
 
     if (!result.success) {
+      console.log("Authentication failed:", result.error)
       return NextResponse.json({ error: result.error }, { status: 401 })
     }
+
+    console.log("Authentication successful for:", email)
 
     // Set HTTP-only cookie
     const response = NextResponse.json({
       success: true,
-      user: result.user,
+      user: {
+        id: result.user!._id,
+        name: result.user!.name,
+        email: result.user!.email,
+        role: result.user!.role || "user",
+        isEmailVerified: result.user!.isEmailVerified,
+        kycStatus: result.user!.kycStatus || "pending",
+      },
     })
 
     response.cookies.set("auth-token", result.token!, {

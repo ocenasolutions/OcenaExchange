@@ -95,14 +95,23 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
-export async function authenticateUser(email: string, password: string): Promise<User | null> {
+export async function authenticateUser(
+  email: string,
+  password: string,
+  twoFactorCode?: string,
+): Promise<{
+  success: boolean
+  user?: User
+  token?: string
+  error?: string
+}> {
   try {
     console.log("Authenticating user:", email)
 
     const user = await getUserByEmail(email)
     if (!user) {
       console.log("User not found")
-      return null
+      return { success: false, error: "Invalid email or password" }
     }
 
     console.log("User found, verifying password...")
@@ -110,14 +119,31 @@ export async function authenticateUser(email: string, password: string): Promise
 
     if (!isPasswordValid) {
       console.log("Password verification failed")
-      return null
+      return { success: false, error: "Invalid email or password" }
     }
 
+    if (user.twoFactorEnabled && !twoFactorCode) {
+      return { success: false, error: "Two-factor authentication code required" }
+    }
+
+    if (user.twoFactorEnabled && twoFactorCode) {
+      // For now, accept any 6-digit code for demo purposes
+      if (!/^\d{6}$/.test(twoFactorCode)) {
+        return { success: false, error: "Invalid two-factor authentication code" }
+      }
+    }
+
+    const token = await generateToken(user._id.toString())
+
     console.log("Authentication successful")
-    return user
+    return {
+      success: true,
+      user,
+      token,
+    }
   } catch (error) {
     console.error("Authentication error:", error)
-    return null
+    return { success: false, error: "Authentication failed" }
   }
 }
 
