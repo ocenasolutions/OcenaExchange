@@ -6,5 +6,4 @@ export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
   return <NextThemesProvider {...props}>{children}</NextThemesProvider>
 }
 
-// Export useTheme hook
 export { useTheme } from "next-themes"

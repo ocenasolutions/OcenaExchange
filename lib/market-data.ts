@@ -13,7 +13,6 @@ export interface MarketData {
 export interface OrderBookEntry {
   price: number
   amount: number
-  total: number
 }
 
 export interface OrderBookData {
@@ -42,121 +41,134 @@ export interface TradeData {
 }
 
 // Mock market data for demo purposes
-const mockMarketData: Record<string, MarketData> = {
-  "BTC/USDT": {
-    symbol: "BTC/USDT",
+const mockMarketData: MarketData[] = [
+  {
+    symbol: "BTCUSDT",
     price: 45234.56,
     change24h: 1234.56,
     changePercent24h: 2.81,
     volume24h: 28456789.12,
-    high24h: 46123.45,
-    low24h: 43987.23,
-    marketCap: 885000000000,
+    high24h: 46000.0,
+    low24h: 44000.0,
+    marketCap: 890000000000,
     lastUpdated: new Date(),
   },
-  "ETH/USDT": {
-    symbol: "ETH/USDT",
+  {
+    symbol: "ETHUSDT",
     price: 3045.78,
-    change24h: -87.23,
-    changePercent24h: -2.78,
-    volume24h: 15678234.56,
-    high24h: 3156.89,
-    low24h: 2987.45,
-    marketCap: 366000000000,
+    change24h: -89.22,
+    changePercent24h: -2.85,
+    volume24h: 15678901.34,
+    high24h: 3150.0,
+    low24h: 3000.0,
+    marketCap: 365000000000,
     lastUpdated: new Date(),
   },
-  "BNB/USDT": {
-    symbol: "BNB/USDT",
+  {
+    symbol: "BNBUSDT",
     price: 312.45,
     change24h: 15.67,
     changePercent24h: 5.28,
     volume24h: 5678901.23,
-    high24h: 318.92,
-    low24h: 298.76,
+    high24h: 320.0,
+    low24h: 295.0,
     marketCap: 48000000000,
     lastUpdated: new Date(),
   },
-  "ADA/USDT": {
-    symbol: "ADA/USDT",
+  {
+    symbol: "ADAUSDT",
     price: 0.4567,
     change24h: 0.0234,
     changePercent24h: 5.41,
     volume24h: 2345678.9,
-    high24h: 0.4789,
-    low24h: 0.4321,
+    high24h: 0.47,
+    low24h: 0.43,
     marketCap: 16000000000,
     lastUpdated: new Date(),
   },
-  "SOL/USDT": {
-    symbol: "SOL/USDT",
-    price: 98.76,
-    change24h: -3.45,
-    changePercent24h: -3.38,
-    volume24h: 3456789.01,
-    high24h: 103.21,
-    low24h: 95.43,
-    marketCap: 42000000000,
-    lastUpdated: new Date(),
-  },
-  "DOT/USDT": {
-    symbol: "DOT/USDT",
-    price: 24.89,
-    change24h: 1.23,
-    changePercent24h: 5.2,
+  {
+    symbol: "DOTUSDT",
+    price: 24.78,
+    change24h: -1.23,
+    changePercent24h: -4.73,
     volume24h: 1234567.89,
-    high24h: 25.67,
-    low24h: 23.45,
+    high24h: 26.0,
+    low24h: 24.0,
     marketCap: 28000000000,
     lastUpdated: new Date(),
   },
-  "MATIC/USDT": {
-    symbol: "MATIC/USDT",
-    price: 1.2345,
-    change24h: 0.0678,
-    changePercent24h: 5.81,
-    volume24h: 4567890.12,
-    high24h: 1.2987,
-    low24h: 1.1876,
-    marketCap: 12000000000,
-    lastUpdated: new Date(),
-  },
-}
+]
 
-export async function fetchMarketData(symbol?: string): Promise<MarketData[]> {
+export async function fetchMarketData(): Promise<MarketData[]> {
   // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 100))
 
-  if (symbol) {
-    const data = mockMarketData[symbol]
-    return data ? [data] : []
-  }
-
-  return Object.values(mockMarketData)
+  // Add some random price fluctuation for demo
+  return mockMarketData.map((data) => ({
+    ...data,
+    price: data.price * (1 + (Math.random() - 0.5) * 0.02), // ±1% random change
+    lastUpdated: new Date(),
+  }))
 }
 
-export async function fetchOrderBook(symbol: string): Promise<OrderBookData> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 50))
+export async function getMarketData(symbol: string): Promise<MarketData | null> {
+  const allData = await fetchMarketData()
+  return allData.find((data) => data.symbol === symbol) || null
+}
+
+export async function getCandlestickData(symbol: string, interval = "1h"): Promise<CandlestickData[]> {
+  // Generate mock candlestick data
+  const data: CandlestickData[] = []
+  const now = Date.now()
+  const intervalMs = 60 * 60 * 1000 // 1 hour
+
+  let basePrice = 45000 // Starting price
+  if (symbol.includes("ETH")) basePrice = 3000
+  if (symbol.includes("BNB")) basePrice = 300
+
+  for (let i = 99; i >= 0; i--) {
+    const timestamp = now - i * intervalMs
+    const open = basePrice * (1 + (Math.random() - 0.5) * 0.05)
+    const close = open * (1 + (Math.random() - 0.5) * 0.03)
+    const high = Math.max(open, close) * (1 + Math.random() * 0.02)
+    const low = Math.min(open, close) * (1 - Math.random() * 0.02)
+    const volume = Math.random() * 1000000
+
+    data.push({
+      timestamp,
+      open,
+      high,
+      low,
+      close,
+      volume,
+    })
+
+    basePrice = close
+  }
+
+  return data
+}
+
+export async function getOrderBookData(symbol: string): Promise<OrderBookData> {
+  const marketData = await getMarketData(symbol)
+  const currentPrice = marketData?.price || 45000
 
   // Generate mock order book data
-  const basePrice = mockMarketData[symbol]?.price || 45000
   const bids: OrderBookEntry[] = []
   const asks: OrderBookEntry[] = []
 
-  // Generate bids (buy orders) - prices below current price
+  // Generate bids (buy orders) below current price
   for (let i = 0; i < 20; i++) {
-    const price = basePrice - (i + 1) * (basePrice * 0.001)
+    const price = currentPrice * (1 - (i + 1) * 0.001) // Decreasing prices
     const amount = Math.random() * 10 + 0.1
-    const total = price * amount
-    bids.push({ price, amount, total })
+    bids.push({ price, amount })
   }
 
-  // Generate asks (sell orders) - prices above current price
+  // Generate asks (sell orders) above current price
   for (let i = 0; i < 20; i++) {
-    const price = basePrice + (i + 1) * (basePrice * 0.001)
+    const price = currentPrice * (1 + (i + 1) * 0.001) // Increasing prices
     const amount = Math.random() * 10 + 0.1
-    const total = price * amount
-    asks.push({ price, amount, total })
+    asks.push({ price, amount })
   }
 
   return {
@@ -167,42 +179,76 @@ export async function fetchOrderBook(symbol: string): Promise<OrderBookData> {
   }
 }
 
-export async function fetchCandlestickData(symbol: string, interval = "1h", limit = 100): Promise<CandlestickData[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 200))
+export async function getTopGainers(): Promise<MarketData[]> {
+  const allData = await fetchMarketData()
+  return allData
+    .filter((data) => data.changePercent24h > 0)
+    .sort((a, b) => b.changePercent24h - a.changePercent24h)
+    .slice(0, 10)
+}
 
-  const basePrice = mockMarketData[symbol]?.price || 45000
-  const data: CandlestickData[] = []
+export async function getTopLosers(): Promise<MarketData[]> {
+  const allData = await fetchMarketData()
+  return allData
+    .filter((data) => data.changePercent24h < 0)
+    .sort((a, b) => a.changePercent24h - b.changePercent24h)
+    .slice(0, 10)
+}
 
-  const intervalMs = getIntervalMs(interval)
-  const now = Date.now()
+export async function searchMarkets(query: string): Promise<MarketData[]> {
+  const allData = await fetchMarketData()
+  return allData.filter((data) => data.symbol.toLowerCase().includes(query.toLowerCase()))
+}
 
-  for (let i = limit - 1; i >= 0; i--) {
-    const timestamp = now - i * intervalMs
-    const open = basePrice + (Math.random() - 0.5) * basePrice * 0.02
-    const close = open + (Math.random() - 0.5) * open * 0.03
-    const high = Math.max(open, close) + Math.random() * Math.max(open, close) * 0.01
-    const low = Math.min(open, close) - Math.random() * Math.min(open, close) * 0.01
-    const volume = Math.random() * 1000 + 100
+// Real-time data simulation
+export function subscribeToMarketData(symbol: string, callback: (data: MarketData) => void): () => void {
+  const interval = setInterval(() => {
+    const currentData = mockMarketData.find((data) => data.symbol === symbol)
+    if (currentData) {
+      // Simulate price changes
+      const priceChange = (Math.random() - 0.5) * currentData.price * 0.001
+      const newPrice = currentData.price + priceChange
 
-    data.push({
-      timestamp,
-      open,
-      high,
-      low,
-      close,
-      volume,
-    })
-  }
+      const updatedData: MarketData = {
+        ...currentData,
+        price: newPrice,
+        change24h: currentData.change24h + priceChange,
+        changePercent24h:
+          ((newPrice - (currentData.price - currentData.change24h)) / (currentData.price - currentData.change24h)) *
+          100,
+        lastUpdated: new Date(),
+      }
 
-  return data
+      callback(updatedData)
+    }
+  }, 1000)
+
+  return () => clearInterval(interval)
+}
+
+export function subscribeToOrderBook(symbol: string, callback: (data: OrderBookData) => void): () => void {
+  const interval = setInterval(async () => {
+    const orderBook = await getOrderBookData(symbol)
+    callback(orderBook)
+  }, 500)
+
+  return () => clearInterval(interval)
+}
+
+export function subscribeToTrades(symbol: string, callback: (trades: TradeData[]) => void): () => void {
+  const interval = setInterval(async () => {
+    const trades = await fetchRecentTrades(symbol, 10)
+    callback(trades)
+  }, 2000)
+
+  return () => clearInterval(interval)
 }
 
 export async function fetchRecentTrades(symbol: string, limit = 50): Promise<TradeData[]> {
   // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 100))
 
-  const basePrice = mockMarketData[symbol]?.price || 45000
+  const basePrice = mockMarketData.find((data) => data.symbol === symbol)?.price || 45000
   const trades: TradeData[] = []
 
   for (let i = 0; i < limit; i++) {
@@ -234,7 +280,7 @@ export async function getMarketStats(): Promise<{
 
   const totalMarketCap = marketData.reduce((sum, market) => sum + (market.marketCap || 0), 0)
   const total24hVolume = marketData.reduce((sum, market) => sum + market.volume24h, 0)
-  const btcMarketCap = mockMarketData["BTC/USDT"]?.marketCap || 0
+  const btcMarketCap = marketData.find((data) => data.symbol === "BTCUSDT")?.marketCap || 0
   const btcDominance = totalMarketCap > 0 ? (btcMarketCap / totalMarketCap) * 100 : 0
 
   return {
@@ -243,64 +289,4 @@ export async function getMarketStats(): Promise<{
     btcDominance,
     activeMarkets: marketData.length,
   }
-}
-
-function getIntervalMs(interval: string): number {
-  const intervals: Record<string, number> = {
-    "1m": 60 * 1000,
-    "5m": 5 * 60 * 1000,
-    "15m": 15 * 60 * 1000,
-    "30m": 30 * 60 * 1000,
-    "1h": 60 * 60 * 1000,
-    "4h": 4 * 60 * 60 * 1000,
-    "1d": 24 * 60 * 60 * 1000,
-    "1w": 7 * 24 * 60 * 60 * 1000,
-  }
-
-  return intervals[interval] || intervals["1h"]
-}
-
-// Real-time data simulation
-export function subscribeToMarketData(symbol: string, callback: (data: MarketData) => void): () => void {
-  const interval = setInterval(() => {
-    const currentData = mockMarketData[symbol]
-    if (currentData) {
-      // Simulate price changes
-      const priceChange = (Math.random() - 0.5) * currentData.price * 0.001
-      const newPrice = currentData.price + priceChange
-
-      const updatedData: MarketData = {
-        ...currentData,
-        price: newPrice,
-        change24h: currentData.change24h + priceChange,
-        changePercent24h:
-          ((newPrice - (currentData.price - currentData.change24h)) / (currentData.price - currentData.change24h)) *
-          100,
-        lastUpdated: new Date(),
-      }
-
-      mockMarketData[symbol] = updatedData
-      callback(updatedData)
-    }
-  }, 1000)
-
-  return () => clearInterval(interval)
-}
-
-export function subscribeToOrderBook(symbol: string, callback: (data: OrderBookData) => void): () => void {
-  const interval = setInterval(async () => {
-    const orderBook = await fetchOrderBook(symbol)
-    callback(orderBook)
-  }, 500)
-
-  return () => clearInterval(interval)
-}
-
-export function subscribeToTrades(symbol: string, callback: (trades: TradeData[]) => void): () => void {
-  const interval = setInterval(async () => {
-    const trades = await fetchRecentTrades(symbol, 10)
-    callback(trades)
-  }, 2000)
-
-  return () => clearInterval(interval)
 }

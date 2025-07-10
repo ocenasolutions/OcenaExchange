@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { authenticateUser } from "@/lib/auth"
-import { cookies } from "next/headers"
 
 export const dynamic = "force-dynamic"
 
@@ -26,20 +25,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 401 })
     }
 
-    // Set HTTP-only cookie with the token
-    const cookieStore = cookies()
-    cookieStore.set("auth-token", result.token!, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    })
+    console.log("Login successful, creating response...")
 
-    console.log("Login successful, token set in cookie")
-    console.log("=== LOGIN API SUCCESS ===")
-
-    return NextResponse.json({
+    // Create response with user data
+    const response = NextResponse.json({
       message: "Login successful",
       user: {
         id: result.user!._id,
@@ -51,6 +40,20 @@ export async function POST(request: NextRequest) {
         kycStatus: result.user!.kycStatus,
       },
     })
+
+    // Set HTTP-only cookie with the token
+    response.cookies.set("auth-token", result.token!, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: "/",
+    })
+
+    console.log("Login successful, token set in cookie")
+    console.log("=== LOGIN API SUCCESS ===")
+
+    return response
   } catch (error) {
     console.error("=== LOGIN API ERROR ===")
     console.error("Login error:", error)

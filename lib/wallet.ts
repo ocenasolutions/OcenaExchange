@@ -1,12 +1,12 @@
 import { connectToDatabase } from "./mongodb"
-import { ObjectId } from "mongodb"
+import type { ObjectId } from "mongodb"
 
-export interface Balance {
+export interface WalletBalance {
+  _id?: ObjectId
   userId: string
   symbol: string
-  available: number
-  locked: number
-  total: number
+  balance: number
+  lockedBalance: number
   updatedAt: Date
 }
 
@@ -16,117 +16,71 @@ export interface Transaction {
   type: "deposit" | "withdrawal" | "trade" | "fee"
   symbol: string
   amount: number
-  status: "pending" | "completed" | "failed" | "cancelled"
+  status: "pending" | "completed" | "failed"
   txHash?: string
   address?: string
-  fee?: number
-  description?: string
   createdAt: Date
   updatedAt: Date
 }
 
-export async function getUserBalances(userId: string): Promise<Balance[]> {
+export async function getUserBalances(userId: string): Promise<WalletBalance[]> {
   const { db } = await connectToDatabase()
 
-  let balances = await db.collection("balances").find({ userId }).toArray()
+  const balances = await db.collection("balances").find({ userId }).toArray()
 
-  // If no balances exist, create default ones
-  if (balances.length === 0) {
-    const defaultBalances = [
-      { userId, symbol: "BTC", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "ETH", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "USDT", available: 1000, locked: 0, total: 1000, updatedAt: new Date() }, // Demo balance
-      { userId, symbol: "BNB", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "ADA", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "SOL", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "DOT", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-      { userId, symbol: "MATIC", available: 0, locked: 0, total: 0, updatedAt: new Date() },
-    ]
-
-    await db.collection("balances").insertMany(defaultBalances)
-    balances = defaultBalances
-  }
-
-  return balances as Balance[]
+  return balances as WalletBalance[]
 }
 
-export async function getBalance(userId: string, symbol: string): Promise<Balance | null> {
+export async function getBalance(userId: string, symbol: string): Promise<WalletBalance | null> {
   const { db } = await connectToDatabase()
 
-  let balance = (await db.collection("balances").findOne({ userId, symbol })) as Balance | null
+  const balance = await db.collection("balances").findOne({ userId, symbol })
 
-  // If balance doesn't exist, create it
-  if (!balance) {
-    const newBalance: Balance = {
-      userId,
-      symbol,
-      available: symbol === "USDT" ? 1000 : 0, // Demo balance for USDT
-      locked: 0,
-      total: symbol === "USDT" ? 1000 : 0,
-      updatedAt: new Date(),
-    }
-
-    await db.collection("balances").insertOne(newBalance)
-    balance = newBalance
-  }
-
-  return balance
+  return balance as WalletBalance | null
 }
 
-export async function updateBalance(
-  userId: string,
-  symbol: string,
-  availableChange: number,
-  lockedChange = 0,
-): Promise<boolean> {
+export async function updateBalance(userId: string, symbol: string, amount: number, locked = 0): Promise<void> {
   const { db } = await connectToDatabase()
 
-  const session = db.client.startSession()
-
-  try {
-    await session.withTransaction(async () => {
-      const balance = await getBalance(userId, symbol)
-      if (!balance) {
-        throw new Error("Balance not found")
-      }
-
-      const newAvailable = balance.available + availableChange
-      const newLocked = balance.locked + lockedChange
-      const newTotal = newAvailable + newLocked
-
-      if (newAvailable < 0 || newLocked < 0) {
-        throw new Error("Insufficient balance")
-      }
-
-      await db.collection("balances").updateOne(
-        { userId, symbol },
-        {
-          $set: {
-            available: newAvailable,
-            locked: newLocked,
-            total: newTotal,
-            updatedAt: new Date(),
-          },
-        },
-        { session },
-      )
-    })
-
-    return true
-  } catch (error) {
-    console.error("Error updating balance:", error)
-    return false
-  } finally {
-    await session.endSession()
-  }
+  await db.collection("balances").updateOne(
+    { userId, symbol },
+    {
+      $inc: { balance: amount, lockedBalance: locked },
+      $set: { updatedAt: new Date() },
+      $setOnInsert: { userId, symbol },
+    },
+    { upsert: true },
+  )
 }
 
 export async function lockBalance(userId: string, symbol: string, amount: number): Promise<boolean> {
-  return updateBalance(userId, symbol, -amount, amount)
+  const { db } = await connectToDatabase()
+
+  const result = await db.collection("balances").updateOne(
+    {
+      userId,
+      symbol,
+      balance: { $gte: amount },
+    },
+    {
+      $inc: { balance: -amount, lockedBalance: amount },
+      $set: { updatedAt: new Date() },
+    },
+  )
+
+  return result.modifiedCount > 0
 }
 
-export async function unlockBalance(userId: string, symbol: string, amount: number): Promise<boolean> {
-  return updateBalance(userId, symbol, amount, -amount)
+export async function unlockBalance(userId: string, symbol: string, amount: number): Promise<void> {
+  const { db } = await connectToDatabase()
+
+  await db.collection("balances").updateOne(
+    { userId, symbol },
+    {
+      $inc: { balance: amount, lockedBalance: -amount },
+      $set: { updatedAt: new Date() },
+    },
+  )
 }
 
 export async function createTransaction(
@@ -148,91 +102,29 @@ export async function createTransaction(
   }
 }
 
-export async function getUserTransactions(userId: string, limit = 50, offset = 0): Promise<Transaction[]> {
+export async function getUserTransactions(userId: string): Promise<Transaction[]> {
   const { db } = await connectToDatabase()
 
-  const transactions = await db
-    .collection("transactions")
-    .find({ userId })
-    .sort({ createdAt: -1 })
-    .skip(offset)
-    .limit(limit)
-    .toArray()
+  const transactions = await db.collection("transactions").find({ userId }).sort({ createdAt: -1 }).limit(100).toArray()
 
   return transactions as Transaction[]
 }
 
-export async function getTransaction(transactionId: string): Promise<Transaction | null> {
+export async function processDeposit(userId: string, symbol: string, amount: number, txHash: string): Promise<void> {
   const { db } = await connectToDatabase()
 
-  const transaction = await db.collection("transactions").findOne({
-    _id: new ObjectId(transactionId),
+  // Create transaction record
+  await createTransaction({
+    userId,
+    type: "deposit",
+    symbol,
+    amount,
+    status: "completed",
+    txHash,
   })
 
-  return transaction as Transaction | null
-}
-
-export async function updateTransactionStatus(
-  transactionId: string,
-  status: Transaction["status"],
-  txHash?: string,
-): Promise<boolean> {
-  const { db } = await connectToDatabase()
-
-  const updateData: any = {
-    status,
-    updatedAt: new Date(),
-  }
-
-  if (txHash) {
-    updateData.txHash = txHash
-  }
-
-  const result = await db
-    .collection("transactions")
-    .updateOne({ _id: new ObjectId(transactionId) }, { $set: updateData })
-
-  return result.modifiedCount > 0
-}
-
-export async function processDeposit(
-  userId: string,
-  symbol: string,
-  amount: number,
-  txHash: string,
-  address: string,
-): Promise<boolean> {
-  const { db } = await connectToDatabase()
-  const session = db.client.startSession()
-
-  try {
-    await session.withTransaction(async () => {
-      // Create transaction record
-      await createTransaction({
-        userId,
-        type: "deposit",
-        symbol,
-        amount,
-        status: "completed",
-        txHash,
-        address,
-        description: `Deposit ${amount} ${symbol}`,
-      })
-
-      // Update balance
-      const success = await updateBalance(userId, symbol, amount)
-      if (!success) {
-        throw new Error("Failed to update balance")
-      }
-    })
-
-    return true
-  } catch (error) {
-    console.error("Error processing deposit:", error)
-    return false
-  } finally {
-    await session.endSession()
-  }
+  // Update balance
+  await updateBalance(userId, symbol, amount)
 }
 
 export async function processWithdrawal(
@@ -240,72 +132,63 @@ export async function processWithdrawal(
   symbol: string,
   amount: number,
   address: string,
-  fee = 0,
-): Promise<string | null> {
+): Promise<boolean> {
   const { db } = await connectToDatabase()
-  const session = db.client.startSession()
 
-  try {
-    let transactionId: string | null = null
-
-    await session.withTransaction(async () => {
-      // Check if user has sufficient balance
-      const balance = await getBalance(userId, symbol)
-      if (!balance || balance.available < amount + fee) {
-        throw new Error("Insufficient balance")
-      }
-
-      // Create transaction record
-      const transaction = await createTransaction({
-        userId,
-        type: "withdrawal",
-        symbol,
-        amount: -amount,
-        status: "pending",
-        address,
-        fee,
-        description: `Withdraw ${amount} ${symbol} to ${address}`,
-      })
-
-      transactionId = transaction._id!.toString()
-
-      // Lock the balance (deduct from available)
-      const success = await updateBalance(userId, symbol, -(amount + fee))
-      if (!success) {
-        throw new Error("Failed to update balance")
-      }
-    })
-
-    return transactionId
-  } catch (error) {
-    console.error("Error processing withdrawal:", error)
-    return null
-  } finally {
-    await session.endSession()
+  // Check if user has sufficient balance
+  const balance = await getBalance(userId, symbol)
+  if (!balance || balance.balance < amount) {
+    return false
   }
+
+  // Lock the balance
+  const locked = await lockBalance(userId, symbol, amount)
+  if (!locked) {
+    return false
+  }
+
+  // Create withdrawal transaction
+  await createTransaction({
+    userId,
+    type: "withdrawal",
+    symbol,
+    amount: -amount,
+    status: "pending",
+    address,
+  })
+
+  return true
 }
 
-export async function getTotalPortfolioValue(userId: string): Promise<number> {
+export async function getPortfolioValue(userId: string): Promise<{ totalValue: number; assets: any[] }> {
   const balances = await getUserBalances(userId)
 
   // Mock prices for demo
-  const prices: Record<string, number> = {
+  const prices: { [key: string]: number } = {
     BTC: 45000,
     ETH: 3000,
     USDT: 1,
     BNB: 300,
     ADA: 0.5,
-    SOL: 100,
     DOT: 25,
-    MATIC: 1.2,
+    LINK: 15,
+    UNI: 8,
   }
 
   let totalValue = 0
-
-  for (const balance of balances) {
+  const assets = balances.map((balance) => {
     const price = prices[balance.symbol] || 0
-    totalValue += balance.total * price
-  }
+    const value = balance.balance * price
+    totalValue += value
 
-  return totalValue
+    return {
+      symbol: balance.symbol,
+      balance: balance.balance,
+      lockedBalance: balance.lockedBalance,
+      price,
+      value,
+    }
+  })
+
+  return { totalValue, assets }
 }
