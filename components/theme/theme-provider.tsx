@@ -1,39 +1,10 @@
-import { MongoClient, type Db } from "mongodb"
+"use client"
+import { ThemeProvider as NextThemesProvider } from "next-themes"
+import type { ThemeProviderProps } from "next-themes"
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"')
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+  return <NextThemesProvider {...props}>{children}</NextThemesProvider>
 }
 
-const uri = process.env.MONGODB_URI
-const options = {}
-
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
-
-if (process.env.NODE_ENV === "development") {
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
-  }
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options)
-    globalWithMongo._mongoClientPromise = client.connect()
-  }
-  clientPromise = globalWithMongo._mongoClientPromise
-} else {
-  client = new MongoClient(uri, options)
-  clientPromise = client.connect()
-}
-
-export default clientPromise
-
-export async function connectToDatabase(): Promise<{ client: MongoClient; db: Db }> {
-  const client = await clientPromise
-  const db = client.db("ocexchange")
-  return { client, db }
-}
-
-export async function getDatabase(): Promise<Db> {
-  const client = await clientPromise
-  return client.db("ocexchange")
-}
+// Export useTheme hook
+export { useTheme } from "next-themes"
