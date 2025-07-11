@@ -1,10 +1,13 @@
 import { TradingInterface } from "@/components/trading/trading-interface"
-import { ProtectedRoute } from "@/components/auth/protected-route"
 
 export default function TradePage() {
   return (
-    <ProtectedRoute>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Trade</h1>
+        <p className="text-gray-600 dark:text-gray-400">Buy and sell cryptocurrencies</p>
+      </div>
       <TradingInterface />
-    </ProtectedRoute>
+    </div>
   )
 }

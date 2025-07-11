@@ -5,13 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MapPin, Calendar, Shield, TrendingUp, Activity, Edit, Camera, CheckCircle, Clock } from "lucide-react"
+import {
+  MapPin,
+  Calendar,
+  Shield,
+  TrendingUp,
+  Activity,
+  Edit,
+  Camera,
+  CheckCircle,
+  Clock,
+  User,
+  Mail,
+  Phone,
+} from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
 
 export default function ProfilePage() {
@@ -24,6 +36,14 @@ export default function ProfilePage() {
     location: "New York, USA",
     bio: "Cryptocurrency enthusiast and active trader with 3+ years of experience in digital assets.",
     joinDate: "January 2022",
+  })
+
+  const [formData, setFormData] = useState({
+    name: user?.name || "",
+    email: user?.email || "",
+    phone: "",
+    address: "",
+    dateOfBirth: "",
   })
 
   const profileCompletion = 85
@@ -95,10 +115,10 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
+    <div className="container mx-auto px-4 py-8 max-w-6xl space-y-6">
+      <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Profile</h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account information and trading preferences</p>
+        <p className="text-gray-600 dark:text-gray-400">Manage your account information and preferences</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -182,20 +202,22 @@ export default function ProfilePage() {
 
         {/* Main Content */}
         <div className="lg:col-span-2">
-          <Tabs defaultValue="personal" className="space-y-6">
+          <Tabs defaultValue="personal" className="space-y-4">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="personal">Personal Info</TabsTrigger>
               <TabsTrigger value="achievements">Achievements</TabsTrigger>
               <TabsTrigger value="activity">Activity</TabsTrigger>
+              <TabsTrigger value="verification">Verification</TabsTrigger>
+              <TabsTrigger value="preferences">Preferences</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="personal">
+            <TabsContent value="personal" className="space-y-4">
               <Card>
                 <CardHeader>
                   <div className="flex justify-between items-center">
                     <div>
                       <CardTitle>Personal Information</CardTitle>
-                      <CardDescription>Update your personal details and preferences</CardDescription>
+                      <CardDescription>Update your personal details and contact information</CardDescription>
                     </div>
                     <Button
                       variant={isEditing ? "default" : "outline"}
@@ -206,30 +228,44 @@ export default function ProfilePage() {
                       ) : (
                         <>
                           <Edit className="h-4 w-4 mr-2" />
-                          Edit
+                          Edit Profile
                         </>
                       )}
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage src="/placeholder.svg?height=80&width=80" />
+                      <AvatarFallback className="text-lg">{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="text-lg font-medium">{user?.name || "User"}</h3>
+                      <p className="text-sm text-gray-500">{user?.email}</p>
+                      <Button variant="outline" size="sm" className="mt-2 bg-transparent">
+                        Change Photo
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name</Label>
                       <Input
                         id="name"
-                        value={profileData.name}
-                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         disabled={!isEditing}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email Address</Label>
+                      <Label htmlFor="email">Email</Label>
                       <Input
                         id="email"
                         type="email"
-                        value={profileData.email}
-                        onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         disabled={!isEditing}
                       />
                     </div>
@@ -237,36 +273,50 @@ export default function ProfilePage() {
                       <Label htmlFor="phone">Phone Number</Label>
                       <Input
                         id="phone"
-                        value={profileData.phone}
-                        onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         disabled={!isEditing}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="location">Location</Label>
+                      <Label htmlFor="dob">Date of Birth</Label>
                       <Input
-                        id="location"
-                        value={profileData.location}
-                        onChange={(e) => setProfileData({ ...profileData, location: e.target.value })}
+                        id="dob"
+                        type="date"
+                        value={formData.dateOfBirth}
+                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
                         disabled={!isEditing}
                       />
                     </div>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea
-                      id="bio"
-                      value={profileData.bio}
-                      onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       disabled={!isEditing}
-                      rows={4}
                     />
+                  </div>
+
+                  <div className="flex justify-end space-x-2">
+                    {isEditing ? (
+                      <>
+                        <Button variant="outline" onClick={() => setIsEditing(false)}>
+                          Cancel
+                        </Button>
+                        <Button onClick={handleSave}>Save Changes</Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => setIsEditing(true)}>Edit Profile</Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="achievements">
+            <TabsContent value="achievements" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Achievements</CardTitle>
@@ -312,7 +362,7 @@ export default function ProfilePage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="activity">
+            <TabsContent value="activity" className="space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Activity</CardTitle>
@@ -339,6 +389,97 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="verification" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Verification</CardTitle>
+                  <CardDescription>Verify your identity to unlock all features</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-5 w-5 text-green-500" />
+                      <div>
+                        <p className="font-medium">Email Verification</p>
+                        <p className="text-sm text-gray-500">Your email has been verified</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      Verified
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <User className="h-5 w-5 text-yellow-500" />
+                      <div>
+                        <p className="font-medium">Identity Verification</p>
+                        <p className="text-sm text-gray-500">Upload government ID for verification</p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                      {user?.kycStatus || "Pending"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Phone className="h-5 w-5 text-gray-400" />
+                      <div>
+                        <p className="font-medium">Phone Verification</p>
+                        <p className="text-sm text-gray-500">Verify your phone number</p>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm">
+                      Verify
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="preferences" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Account Preferences</CardTitle>
+                  <CardDescription>Customize your trading experience</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Email Notifications</p>
+                        <p className="text-sm text-gray-500">Receive trading alerts and updates</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Configure
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Two-Factor Authentication</p>
+                        <p className="text-sm text-gray-500">Add an extra layer of security</p>
+                      </div>
+                      <Badge variant={user?.twoFactorEnabled ? "secondary" : "outline"}>
+                        {user?.twoFactorEnabled ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">API Access</p>
+                        <p className="text-sm text-gray-500">Manage your API keys</p>
+                      </div>
+                      <Button variant="outline" size="sm">
+                        Manage
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

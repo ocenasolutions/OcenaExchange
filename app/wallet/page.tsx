@@ -1,10 +1,13 @@
 import { WalletInterface } from "@/components/wallet/wallet-interface"
-import { ProtectedRoute } from "@/components/auth/protected-route"
 
 export default function WalletPage() {
   return (
-    <ProtectedRoute>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Wallet</h1>
+        <p className="text-gray-600 dark:text-gray-400">Manage your cryptocurrency assets</p>
+      </div>
       <WalletInterface />
-    </ProtectedRoute>
+    </div>
   )
 }

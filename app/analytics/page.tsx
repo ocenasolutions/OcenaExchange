@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Progress } from "@/components/ui/progress"
 import {
   TrendingUp,
   TrendingDown,
   DollarSign,
-  PieChart,
+  PieChartIcon,
   BarChart3,
   Download,
   Target,
@@ -19,6 +18,23 @@ import {
   Activity,
   Zap,
 } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Pie, Cell } from "recharts"
+
+const tradingData = [
+  { name: "Jan", profit: 4000, loss: 2400, volume: 2400 },
+  { name: "Feb", profit: 3000, loss: 1398, volume: 2210 },
+  { name: "Mar", profit: 2000, loss: 9800, volume: 2290 },
+  { name: "Apr", profit: 2780, loss: 3908, volume: 2000 },
+  { name: "May", profit: 1890, loss: 4800, volume: 2181 },
+  { name: "Jun", profit: 2390, loss: 3800, volume: 2500 },
+]
+
+const portfolioData = [
+  { name: "Bitcoin", value: 45, color: "#f7931a" },
+  { name: "Ethereum", value: 30, color: "#627eea" },
+  { name: "Cardano", value: 15, color: "#0033ad" },
+  { name: "Others", value: 10, color: "#8884d8" },
+]
 
 export default function AnalyticsPage() {
   const [timeRange, setTimeRange] = useState("30d")
@@ -113,7 +129,12 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Analytics Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-2">Track your trading performance and portfolio metrics</p>
+      </div>
+
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -227,273 +248,212 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Analytics */}
-        <div className="lg:col-span-2">
-          <Tabs defaultValue="portfolio" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-              <TabsTrigger value="trading">Trading</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-            </TabsList>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="trading">Trading</TabsTrigger>
+          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+        </TabsList>
 
-            <TabsContent value="portfolio">
-              <div className="space-y-6">
-                {/* Asset Allocation */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <PieChart className="h-5 w-5" />
-                      <span>Asset Allocation</span>
-                    </CardTitle>
-                    <CardDescription>Current portfolio distribution</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {assetAllocation.map((asset) => (
-                        <div
-                          key={asset.symbol}
-                          className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-gray-800"
-                        >
-                          <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                              <span className="font-bold text-blue-600 dark:text-blue-400">{asset.symbol}</span>
-                            </div>
-                            <div>
-                              <p className="font-medium">{asset.name}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">{formatCurrency(asset.value)}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">{asset.percentage}%</p>
-                            <p className={`text-sm ${asset.change > 0 ? "text-green-600" : "text-red-600"}`}>
-                              {formatPercentage(asset.change)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+        <TabsContent value="overview" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$45,231.89</div>
+                <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$12,234.56</div>
+                <p className="text-xs text-muted-foreground">+15.3% from last month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Win Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">68.5%</div>
+                <p className="text-xs text-muted-foreground">+2.1% from last month</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Active Trades</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">12</div>
+                <p className="text-xs text-muted-foreground">3 new this week</p>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-                {/* Portfolio Performance Chart Placeholder */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Portfolio Performance</CardTitle>
-                    <CardDescription>Value over time</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">Portfolio performance chart would go here</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="trading">
-              <div className="space-y-6">
-                {/* Trading Statistics */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Trading Statistics</CardTitle>
-                    <CardDescription>Detailed trading performance metrics</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <p className="text-2xl font-bold text-green-600">{formatCurrency(tradingStats.bestTrade)}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Best Trade</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <p className="text-2xl font-bold text-red-600">{formatCurrency(tradingStats.worstTrade)}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Worst Trade</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <p className="text-2xl font-bold text-blue-600">{formatCurrency(tradingStats.avgProfit)}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Avg Profit</p>
-                      </div>
-                      <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <p className="text-2xl font-bold text-purple-600">{tradingStats.avgHoldTime}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Avg Hold Time</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Recent Trades */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Trades</CardTitle>
-                    <CardDescription>Your latest trading activity</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {recentTrades.map((trade) => (
-                        <div key={trade.id} className="flex items-center justify-between p-4 rounded-lg border">
-                          <div className="flex items-center space-x-4">
-                            <Badge variant={trade.type === "Buy" ? "default" : "secondary"}>{trade.type}</Badge>
-                            <div>
-                              <p className="font-medium">{trade.pair}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">
-                                {trade.amount} @ {formatCurrency(trade.price)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className={`font-medium ${trade.profit > 0 ? "text-green-600" : "text-red-600"}`}>
-                              {formatCurrency(trade.profit)}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">{trade.date}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="performance">
-              <div className="space-y-6">
-                {/* Performance Goals */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Performance Goals</CardTitle>
-                    <CardDescription>Track your progress towards trading goals</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-6">
-                      {performanceGoals.map((goal, index) => (
-                        <div key={index} className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="font-medium">{goal.name}</span>
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                              {goal.name.includes("Rate") || goal.name.includes("Management")
-                                ? `${goal.current}%`
-                                : goal.name.includes("Profit")
-                                  ? formatCurrency(goal.current)
-                                  : goal.current}{" "}
-                              /{" "}
-                              {goal.name.includes("Rate") || goal.name.includes("Management")
-                                ? `${goal.target}%`
-                                : goal.name.includes("Profit")
-                                  ? formatCurrency(goal.target)
-                                  : goal.target}
-                            </span>
-                          </div>
-                          <Progress value={goal.progress} className="h-2" />
-                          <p className="text-xs text-gray-500">{goal.progress}% complete</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Performance Chart Placeholder */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Performance Trends</CardTitle>
-                    <CardDescription>Monthly performance comparison</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                      <p className="text-gray-500">Performance trends chart would go here</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Sidebar */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Quick Stats */}
+        <TabsContent value="trading" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Quick Stats</CardTitle>
+              <CardTitle>Trading Performance</CardTitle>
+              <CardDescription>Your profit and loss over the last 6 months</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={tradingData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="profit" fill="#10b981" />
+                  <Bar dataKey="loss" fill="#ef4444" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Trading Statistics */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Trading Statistics</CardTitle>
+              <CardDescription>Detailed trading performance metrics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(tradingStats.bestTrade)}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Best Trade</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-2xl font-bold text-red-600">{formatCurrency(tradingStats.worstTrade)}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Worst Trade</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-2xl font-bold text-blue-600">{formatCurrency(tradingStats.avgProfit)}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Avg Profit</p>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                  <p className="text-2xl font-bold text-purple-600">{tradingStats.avgHoldTime}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Avg Hold Time</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Trades */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Trades</CardTitle>
+              <CardDescription>Your latest trading activity</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentTrades.map((trade) => (
+                  <div key={trade.id} className="flex items-center justify-between p-4 rounded-lg border">
+                    <div className="flex items-center space-x-4">
+                      <Badge variant={trade.type === "Buy" ? "default" : "secondary"}>{trade.type}</Badge>
+                      <div>
+                        <p className="font-medium">{trade.pair}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {trade.amount} @ {formatCurrency(trade.price)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-medium ${trade.profit > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatCurrency(trade.profit)}
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">{trade.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="portfolio" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Portfolio Distribution</CardTitle>
+              <CardDescription>Your current asset allocation</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <Pie
+                  data={portfolioData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {portfolioData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Asset Allocation */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <PieChartIcon className="h-5 w-5" />
+                <span>Asset Allocation</span>
+              </CardTitle>
+              <CardDescription>Current portfolio distribution</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Today's P&L</span>
-                  <span className="font-medium text-green-600">+{formatCurrency(portfolioMetrics.dayChangeValue)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Best Performer</span>
-                  <Badge variant="default">{portfolioMetrics.bestPerformer}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Worst Performer</span>
-                  <Badge variant="destructive">{portfolioMetrics.worstPerformer}</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Active Positions</span>
-                  <span className="font-medium">4</span>
-                </div>
+                {assetAllocation.map((asset) => (
+                  <div
+                    key={asset.symbol}
+                    className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-gray-800"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                        <span className="font-bold text-blue-600 dark:text-blue-400">{asset.symbol}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{asset.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{formatCurrency(asset.value)}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{asset.percentage}%</p>
+                      <p className={`text-sm ${asset.change > 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatPercentage(asset.change)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Risk Metrics */}
+          {/* Portfolio Performance Chart Placeholder */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Risk Metrics</CardTitle>
+              <CardTitle>Portfolio Performance</CardTitle>
+              <CardDescription>Value over time</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm">Portfolio Risk</span>
-                    <span className="text-sm font-medium">Medium</span>
-                  </div>
-                  <Progress value={60} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm">Diversification</span>
-                    <span className="text-sm font-medium">Good</span>
-                  </div>
-                  <Progress value={75} className="h-2" />
-                </div>
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm">Volatility</span>
-                    <span className="text-sm font-medium">High</span>
-                  </div>
-                  <Progress value={80} className="h-2" />
-                </div>
+              <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                <p className="text-gray-500">Portfolio performance chart would go here</p>
               </div>
             </CardContent>
           </Card>
-
-          {/* Market Sentiment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Market Sentiment</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="text-3xl font-bold text-green-600">Bullish</div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Market sentiment is positive with strong buying pressure across major cryptocurrencies.
-                </p>
-                <div className="flex justify-center space-x-4 text-sm">
-                  <div className="text-center">
-                    <div className="font-medium text-green-600">72%</div>
-                    <div className="text-gray-500">Bulls</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-medium text-red-600">28%</div>
-                    <div className="text-gray-500">Bears</div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
