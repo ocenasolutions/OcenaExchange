@@ -492,6 +492,7 @@ export default function ReferralsPage() {
             <CardContent>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Have questions about the referral program? Our support team is here to help.
+                Contact us on the www.ocena.in
               </p>
               <Button variant="outline" className="w-full bg-transparent">
                 Contact Support

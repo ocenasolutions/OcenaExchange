@@ -1,130 +1,135 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
 
 interface User {
-  _id: string
-  email: string
+  id: string
   name: string
-  role: "user" | "admin"
-  kycStatus: "pending" | "approved" | "rejected"
-  twoFactorEnabled: boolean
-  emailVerified: boolean
-  createdAt: string
+  email: string
+  walletAddress?: string
+  role: string
+  isVerified: boolean
+}
+
+interface AuthResult {
+  success: boolean
+  error?: string
 }
 
 interface AuthContextType {
   user: User | null
-  login: (email: string, password: string, twoFactorCode?: string) => Promise<{ success: boolean; error?: string }>
-  register: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>
-  logout: () => Promise<void>
   loading: boolean
-  enable2FA: () => Promise<string>
-  verify2FA: (code: string) => Promise<boolean>
+  login: (email: string, password: string) => Promise<AuthResult>
+  loginWithWallet: (address: string, signature: string, message: string) => Promise<AuthResult>
+  logout: () => Promise<void>
+  checkAuth: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    checkAuth()
-  }, [])
-
   const checkAuth = async () => {
     try {
-      const response = await fetch("/api/auth/me")
+      const response = await fetch("/api/auth/me", {
+        credentials: "include",
+      })
+
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
+      } else {
+        setUser(null)
       }
     } catch (error) {
-      console.error("Auth check failed:", error)
+      console.error("Auth check error:", error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
-  const login = async (email: string, password: string, twoFactorCode?: string) => {
+  const login = async (email: string, password: string): Promise<AuthResult> => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, twoFactorCode }),
+        body: JSON.stringify({ email, password }),
+        credentials: "include",
       })
 
       const data = await response.json()
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setUser(data.user)
         return { success: true }
       } else {
-        return { success: false, error: data.error }
+        return { success: false, error: data.error || "Login failed" }
       }
     } catch (error) {
-      return { success: false, error: "Login failed. Please try again." }
+      console.error("Login error:", error)
+      return { success: false, error: "Network error" }
     }
   }
 
-  const register = async (email: string, password: string, name: string) => {
+  const loginWithWallet = async (address: string, signature: string, message: string): Promise<AuthResult> => {
     try {
-      const response = await fetch("/api/auth/register", {
+      const response = await fetch("/api/auth/wallet-login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, name }),
+        body: JSON.stringify({ address, signature, message }),
+        credentials: "include",
       })
 
       const data = await response.json()
 
-      if (response.ok) {
+      if (response.ok && data.success) {
+        setUser(data.user)
         return { success: true }
       } else {
-        return { success: false, error: data.error }
+        return { success: false, error: data.error || "Wallet login failed" }
       }
     } catch (error) {
-      return { success: false, error: "Registration failed. Please try again." }
+      console.error("Wallet login error:", error)
+      return { success: false, error: "Network error" }
     }
   }
 
   const logout = async () => {
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
-      setUser(null)
-      router.push("/")
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      })
     } catch (error) {
-      console.error("Logout failed:", error)
+      console.error("Logout error:", error)
+    } finally {
+      setUser(null)
+      router.push("/auth/login")
     }
   }
 
-  const enable2FA = async (): Promise<string> => {
-    // TODO: Implement 2FA setup
-    return "otpauth://totp/OC%20Exchange:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=OC%20Exchange"
-  }
-
-  const verify2FA = async (code: string): Promise<boolean> => {
-    // TODO: Implement 2FA verification
-    return code === "123456"
-  }
+  useEffect(() => {
+    checkAuth()
+  }, [])
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        login,
-        register,
-        logout,
         loading,
-        enable2FA,
-        verify2FA,
+        login,
+        loginWithWallet,
+        logout,
+        checkAuth,
       }}
     >
       {children}

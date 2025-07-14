@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
@@ -30,6 +30,7 @@ import { useAuth } from "@/components/providers/auth-provider"
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
   const { user, logout } = useAuth()
 
   const navigationItems = [
@@ -57,32 +58,67 @@ export function Navigation() {
 
   const isActive = (href: string) => pathname === href
 
-  const NavLink = ({ item, mobile = false }: { item: any; mobile?: boolean }) => (
-    <Link
-      href={item.href}
-      className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
-        isActive(item.href)
-          ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-          : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-      } ${mobile ? "w-full" : ""}`}
-      onClick={() => mobile && setIsOpen(false)}
-    >
-      <item.icon className="h-5 w-5" />
-      <span>{item.name}</span>
-      {item.badge && (
-        <Badge variant="secondary" className="ml-auto text-xs">
-          {item.badge}
-        </Badge>
-      )}
-    </Link>
+  const handleMobileNavigation = useCallback(
+    (href: string) => {
+      setIsOpen(false)
+      router.push(href)
+    },
+    [router],
   )
+
+  const handleLogout = useCallback(async () => {
+    setIsOpen(false)
+    await logout()
+    router.push("/auth/login")
+  }, [logout, router])
+
+  const NavLink = ({ item, mobile = false }: { item: any; mobile?: boolean }) => {
+    const linkClasses = `flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${
+      isActive(item.href)
+        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+    }`
+
+    if (mobile) {
+      return (
+        <button
+          onClick={() => handleMobileNavigation(item.href)}
+          className={linkClasses}
+        >
+          <item.icon className="h-5 w-5" />
+          <span>{item.name}</span>
+          {item.badge && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {item.badge}
+            </Badge>
+          )}
+        </button>
+      )
+    }
+
+    return (
+      <Link href={item.href} className={linkClasses}>
+        <item.icon className="h-5 w-5" />
+        <span>{item.name}</span>
+        {item.badge && (
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {item.badge}
+          </Badge>
+        )}
+      </Link>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
 
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col">
+      <nav className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col z-40">
         <div className="p-6">
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/dashboard" className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">OC</span>
             </div>
@@ -141,7 +177,7 @@ export function Navigation() {
           </div>
           <div className="flex items-center justify-between">
             <ThemeSwitcher />
-            <Button variant="outline" size="sm" onClick={logout}>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
             </Button>
           </div>
@@ -152,7 +188,7 @@ export function Navigation() {
       <div className="lg:hidden">
         <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/dashboard" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">OC</span>
               </div>
@@ -227,7 +263,7 @@ export function Navigation() {
 
                     {/* Logout */}
                     <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <Button variant="outline" className="w-full bg-transparent" onClick={logout}>
+                      <Button variant="outline" className="w-full bg-transparent" onClick={handleLogout}>
                         Logout
                       </Button>
                     </div>

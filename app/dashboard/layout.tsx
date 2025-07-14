@@ -1,9 +1,7 @@
 "use client"
 
-import type React from "react"
-
-import { Navigation } from "@/components/layout/navigation"
 import { ProtectedRoute } from "@/components/auth/protected-route"
+import { Navigation } from "@/components/layout/navigation"
 
 export default function DashboardLayout({
   children,
@@ -14,10 +12,10 @@ export default function DashboardLayout({
     <ProtectedRoute>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <Navigation />
-        <main className="lg:pl-64">
-          <div className="p-4 lg:p-8">{children}</div>
+        <main className="lg:ml-64 p-6">
+          {children}
         </main>
       </div>
     </ProtectedRoute>
   )
-}
+} 

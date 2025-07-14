@@ -2,8 +2,12 @@ import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { connectToDatabase } from "./mongodb"
 import { ObjectId } from "mongodb"
+import { serialize } from "cookie"
+import speakeasy from "speakeasy"
+import { sendEmail } from "./email"
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"
+const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret"
+const TOKEN_EXPIRATION = "1h" // 1 hour
 
 export interface User {
   _id: ObjectId
@@ -46,18 +50,37 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   }
 }
 
-export async function generateToken(userId: string): Promise<string> {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" })
+export function generateToken(userId: string, walletAddress?: string): string {
+  const payload = { userId, walletAddress }
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRATION })
 }
 
-export async function verifyToken(token: string): Promise<{ userId: string } | null> {
+export function verifyToken(token: string): { userId: string; walletAddress?: string } | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string }
-    return decoded
+    return jwt.verify(token, JWT_SECRET) as { userId: string; walletAddress?: string }
   } catch (error) {
-    console.error("Token verification error:", error)
     return null
   }
+}
+
+export function createAuthCookie(token: string): string {
+  return serialize("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 60 * 60 * 24 * 7, // 1 week
+    path: "/",
+  })
+}
+
+export function clearAuthCookie(): string {
+  return serialize("token", "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 0, // Expire immediately
+    path: "/",
+  })
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
@@ -146,9 +169,19 @@ export async function authenticateUser(
       if (!/^\d{6}$/.test(twoFactorCode)) {
         return { success: false, error: "Invalid two-factor authentication code" }
       }
+      const isTwoFactorValid = speakeasy.totp.verify({
+        secret: user.twoFactorSecret || "",
+        encoding: "base32",
+        token: twoFactorCode,
+        window: 2,
+      })
+      if (!isTwoFactorValid) {
+        console.log("2FA verification failed")
+        return { success: false, error: "Invalid two-factor authentication code" }
+      }
     }
 
-    const token = await generateToken(user._id.toString())
+    const token = generateToken(user._id.toString())
 
     console.log("Authentication successful")
     console.log("=== AUTHENTICATION END (SUCCESS) ===")
@@ -203,8 +236,6 @@ export async function createUser(userData: {
 
 export async function generateTwoFactorSecret(): Promise<{ secret: string; qrCode: string }> {
   try {
-    const speakeasy = await import("speakeasy")
-
     const secret = speakeasy.generateSecret({
       name: "OC Exchange",
       length: 32,
@@ -222,8 +253,6 @@ export async function generateTwoFactorSecret(): Promise<{ secret: string; qrCod
 
 export async function verifyTwoFactorToken(secret: string, token: string): Promise<boolean> {
   try {
-    const speakeasy = await import("speakeasy")
-
     return speakeasy.totp.verify({
       secret,
       encoding: "base32",
@@ -237,8 +266,6 @@ export async function verifyTwoFactorToken(secret: string, token: string): Promi
 }
 
 export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
-  const { sendEmail } = await import("./email")
-
   const subject = "Welcome to OC Exchange!"
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
