@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider"
 import { AuthProvider } from "@/components/providers/auth-provider"
 import { WebSocketProvider } from "@/components/providers/websocket-provider"
 import { Toaster } from "@/components/ui/toaster"
+import { Navigation } from "@/components/layout/navigation"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -25,7 +26,9 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <WebSocketProvider>
-              {children}
+              <Navigation />
+              {/* Main content area, adjusted for sidebar and mobile header */}
+              <main className="lg:ml-64 pt-16 lg:pt-0">{children}</main>
               <Toaster />
             </WebSocketProvider>
           </AuthProvider>

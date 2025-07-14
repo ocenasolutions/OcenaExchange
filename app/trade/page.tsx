@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
+import { TradingViewWidget } from "@/components/trading/trading-view-widget" // Import TradingViewWidget
 
 interface Order {
   id: string
@@ -256,9 +257,8 @@ export default function TradePage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
-                      <p className="text-muted-foreground">Trading chart will be displayed here</p>
-                    </div>
+                    {/* Replace placeholder with TradingViewWidget */}
+                    <TradingViewWidget symbol={selectedPair} height={360} />
                   </CardContent>
                 </Card>
               </div>
