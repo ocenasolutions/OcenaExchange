@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Navigation } from "@/components/layout/navigation"
+// import { Navigation } from "@/components/layout/navigation" // Navigation is now global
 import { WalletOverview } from "./wallet-overview"
 import { DepositModal } from "./deposit-modal"
 import { WithdrawModal } from "./withdraw-modal"
@@ -29,7 +29,7 @@ export function WalletInterface() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Navigation />
+      {/* Removed <Navigation /> as it's now in app/layout.tsx */}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -46,21 +46,21 @@ export function WalletInterface() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
               <div className="space-y-3">
                 <button
-                  onClick={() => setActiveModal("deposit")}
+                  onClick={() => handleDeposit("BTC")} // Pass a default asset, e.g., "BTC"
                   className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Deposit Crypto
                 </button>
                 <button
-                  onClick={() => setActiveModal("withdraw")}
+                  onClick={() => handleWithdraw("BTC")} // Pass a default asset, e.g., "BTC"
                   className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
                 >
                   <Minus className="h-5 w-5 mr-2" />
                   Withdraw Crypto
                 </button>
                 <button
-                  onClick={() => setActiveModal("transfer")}
+                  onClick={() => handleTransfer("BTC")} // Pass a default asset, e.g., "BTC"
                   className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <ArrowUpDown className="h-5 w-5 mr-2" />
@@ -95,9 +95,13 @@ export function WalletInterface() {
       </main>
 
       {/* Modals */}
-      {activeModal === "deposit" && <DepositModal asset={selectedAsset} onClose={() => setActiveModal(null)} />}
+      {activeModal === "deposit" && selectedAsset && (
+        <DepositModal asset={selectedAsset} onClose={() => setActiveModal(null)} />
+      )}
 
-      {activeModal === "withdraw" && <WithdrawModal asset={selectedAsset} onClose={() => setActiveModal(null)} />}
+      {activeModal === "withdraw" && selectedAsset && (
+        <WithdrawModal asset={selectedAsset} onClose={() => setActiveModal(null)} />
+      )}
     </div>
   )
 }

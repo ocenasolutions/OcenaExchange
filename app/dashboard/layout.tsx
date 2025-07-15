@@ -1,21 +1,14 @@
-"use client"
-
-import { ProtectedRoute } from "@/components/auth/protected-route"
-import { Navigation } from "@/components/layout/navigation"
-
+import type React from "react"
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <Navigation />
-        <main className="lg:ml-64 p-6">
-          {children}
-        </main>
+    <div className="flex min-h-screen">
+      <div className="flex-1 flex flex-col">
+        <main className="flex-1 p-4 lg:p-6">{children}</main>
       </div>
-    </ProtectedRoute>
+    </div>
   )
-} 
+}

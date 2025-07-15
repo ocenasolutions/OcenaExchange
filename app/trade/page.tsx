@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { TrendingUp, TrendingDown, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/providers/auth-provider"
-import { TradingViewWidget } from "@/components/trading/trading-view-widget" // Import TradingViewWidget
+import { TradingViewWidget } from "@/components/trading/trading-view-widget"
 
 interface Order {
   id: string
@@ -216,7 +216,9 @@ export default function TradePage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pt-14 lg:pt-0">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        {" "}
+        {/* Removed pt-14 lg:pt-0 */}
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <div className="px-4 py-6 sm:px-0">
             <div className="mb-8">

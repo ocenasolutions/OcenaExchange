@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -29,6 +27,7 @@ import { useAuth } from "@/components/providers/auth-provider"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
@@ -56,20 +55,53 @@ export function Navigation() {
     { name: "API Docs", href: "/api", icon: FileText },
   ]
 
+  // Reset navigation state when pathname changes
+  useEffect(() => {
+    setIsNavigating(false)
+  }, [pathname])
+
   const isActive = (href: string) => pathname === href
 
   const handleMobileNavigation = useCallback(
     (href: string) => {
+      // Prevent multiple clicks
+      if (isNavigating) return
+      
+      setIsNavigating(true)
       setIsOpen(false)
-      router.push(href)
+      
+      // Add small delay to ensure sheet closes before navigation
+      setTimeout(() => {
+        router.push(href)
+      }, 100)
     },
-    [router],
+    [router, isNavigating],
+  )
+
+  const handleDesktopNavigation = useCallback(
+    (href: string, e: React.MouseEvent) => {
+      // Prevent multiple clicks
+      if (isNavigating) {
+        e.preventDefault()
+        return
+      }
+      
+      setIsNavigating(true)
+      
+      // Let Next.js Link handle the navigation naturally
+      // The useEffect will reset isNavigating when pathname changes
+    },
+    [isNavigating],
   )
 
   const handleLogout = useCallback(async () => {
     setIsOpen(false)
-    await logout()
-    router.push("/auth/login")
+    try {
+      await logout()
+      router.push("/auth/login")
+    } catch (error) {
+      console.error("Logout failed:", error)
+    }
   }, [logout, router])
 
   const NavLink = ({ item, mobile = false }: { item: any; mobile?: boolean }) => {
@@ -77,13 +109,14 @@ export function Navigation() {
       isActive(item.href)
         ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-    }`
+    } ${isNavigating ? "opacity-50 pointer-events-none" : ""}`
 
     if (mobile) {
       return (
-        <button
-          onClick={() => handleMobileNavigation(item.href)}
+        <button 
+          onClick={() => handleMobileNavigation(item.href)} 
           className={linkClasses}
+          disabled={isNavigating}
         >
           <item.icon className="h-5 w-5" />
           <span>{item.name}</span>
@@ -97,7 +130,12 @@ export function Navigation() {
     }
 
     return (
-      <Link href={item.href} className={linkClasses}>
+      <Link 
+        href={item.href} 
+        className={linkClasses}
+        onClick={(e) => handleDesktopNavigation(item.href, e)}
+        prefetch={true}
+      >
         <item.icon className="h-5 w-5" />
         <span>{item.name}</span>
         {item.badge && (
@@ -109,6 +147,7 @@ export function Navigation() {
     )
   }
 
+  // Don't render navigation if user is not authenticated
   if (!user) {
     return null
   }

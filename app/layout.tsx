@@ -1,13 +1,6 @@
 import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme/theme-provider"
-import { AuthProvider } from "@/components/providers/auth-provider"
-import { WebSocketProvider } from "@/components/providers/websocket-provider"
-import { Toaster } from "@/components/ui/toaster"
-
-const inter = Inter({ subsets: ["latin"] })
+import type { Metadata } from "next/types"
+import ClientLayout from "./ClientLayout"
 
 export const metadata: Metadata = {
   title: "OC Exchange - Cryptocurrency Trading Platform",
@@ -16,21 +9,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode
-}) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>
-            <WebSocketProvider>
-              {children}
-              <Toaster />
-            </WebSocketProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </body>
-    </html>
-  )
+}>) {
+  return <ClientLayout>{children}</ClientLayout>
 }
+

@@ -98,7 +98,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
         
         <div style="text-align: center; margin: 30px 0;">
           <a href="https://beautiful-mooncake-46997a.netlify.app/dashboard" 
-             style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+            style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
             Get Started
           </a>
         </div>
