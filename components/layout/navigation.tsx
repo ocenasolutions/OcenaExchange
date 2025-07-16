@@ -4,33 +4,23 @@ import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
-import {
-  Menu,
-  Home,
-  TrendingUp,
-  Wallet,
-  BarChart3,
-  Settings,
-  User,
-  Shield,
-  HelpCircle,
-  Mail,
-  FileText,
-  Newspaper,
-  PieChart,
-  Users,
-  Lock,
-  X,
-} from "lucide-react"
+import {  Menu,  Home,  TrendingUp,  Wallet,  BarChart3,  Settings,  User, Shield,  HelpCircle,  Mail,  FileText,  Newspaper,  PieChart,  Users,  Lock,  X,} from "lucide-react"
 import { ThemeSwitcher } from "@/components/theme/theme-switcher"
 import { useAuth } from "@/components/providers/auth-provider"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isNavigating, setIsNavigating] = useState(false)
+  const [isReady, setIsReady] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsReady(true)
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -55,52 +45,39 @@ export function Navigation() {
     { name: "API Docs", href: "/api", icon: FileText },
   ]
 
-  // Reset navigation state when pathname changes
-  useEffect(() => {
-    setIsNavigating(false)
-  }, [pathname])
-
   const isActive = (href: string) => pathname === href
 
-  const handleMobileNavigation = useCallback(
+  const handleNavigation = useCallback(
     (href: string) => {
-      // Prevent multiple clicks
-      if (isNavigating) return
+      if (!isReady) return
       
-      setIsNavigating(true)
+      console.log('Navigating to:', href, 'Current:', pathname)
       setIsOpen(false)
       
-      // Add small delay to ensure sheet closes before navigation
-      setTimeout(() => {
-        router.push(href)
-      }, 100)
-    },
-    [router, isNavigating],
-  )
-
-  const handleDesktopNavigation = useCallback(
-    (href: string, e: React.MouseEvent) => {
-      // Prevent multiple clicks
-      if (isNavigating) {
-        e.preventDefault()
-        return
+      const navigate = () => {
+        try {
+          router.push(href)
+        } catch (error) {
+          console.error('Router push failed, using window.location:', error)
+          window.location.href = href
+        }
       }
       
-      setIsNavigating(true)
-      
-      // Let Next.js Link handle the navigation naturally
-      // The useEffect will reset isNavigating when pathname changes
+      navigate()
     },
-    [isNavigating],
+    [router, pathname, isReady],
   )
 
   const handleLogout = useCallback(async () => {
     setIsOpen(false)
     try {
       await logout()
-      router.push("/auth/login")
+      // Use window.location for logout to ensure clean navigation
+      window.location.href = "/auth/login"
     } catch (error) {
       console.error("Logout failed:", error)
+      // Fallback to router if logout fails
+      router.push("/auth/login")
     }
   }, [logout, router])
 
@@ -109,14 +86,14 @@ export function Navigation() {
       isActive(item.href)
         ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-    } ${isNavigating ? "opacity-50 pointer-events-none" : ""}`
+    } ${!isReady ? "opacity-50 pointer-events-none" : ""}`
 
     if (mobile) {
       return (
         <button 
-          onClick={() => handleMobileNavigation(item.href)} 
+          onClick={() => handleNavigation(item.href)} 
           className={linkClasses}
-          disabled={isNavigating}
+          disabled={!isReady}
         >
           <item.icon className="h-5 w-5" />
           <span>{item.name}</span>
@@ -129,21 +106,31 @@ export function Navigation() {
       )
     }
 
+    // For desktop, use both Link and onClick handler for maximum compatibility
     return (
-      <Link 
-        href={item.href} 
-        className={linkClasses}
-        onClick={(e) => handleDesktopNavigation(item.href, e)}
-        prefetch={true}
-      >
-        <item.icon className="h-5 w-5" />
-        <span>{item.name}</span>
-        {item.badge && (
-          <Badge variant="secondary" className="ml-auto text-xs">
-            {item.badge}
-          </Badge>
-        )}
-      </Link>
+      <div className={linkClasses}>
+        <Link 
+          href={item.href} 
+          className="flex items-center space-x-3 w-full"
+          onClick={(e) => {
+            if (!isReady) {
+              e.preventDefault()
+              return
+            }
+            // Let the Link handle it, but also call our handler as backup
+            handleNavigation(item.href)
+          }}
+          prefetch={true}
+        >
+          <item.icon className="h-5 w-5" />
+          <span>{item.name}</span>
+          {item.badge && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {item.badge}
+            </Badge>
+          )}
+        </Link>
+      </div>
     )
   }
 
