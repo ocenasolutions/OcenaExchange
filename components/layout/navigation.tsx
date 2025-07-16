@@ -10,17 +10,9 @@ import { useAuth } from "@/components/providers/auth-provider"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
-  const [isReady, setIsReady] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuth()
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsReady(true)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [])
 
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -49,23 +41,22 @@ export function Navigation() {
 
   const handleNavigation = useCallback(
     (href: string) => {
-      if (!isReady) return
-      
       console.log('Navigating to:', href, 'Current:', pathname)
       setIsOpen(false)
       
-      const navigate = () => {
-        try {
-          router.push(href)
-        } catch (error) {
-          console.error('Router push failed, using window.location:', error)
-          window.location.href = href
-        }
+      // Don't navigate if already on the same page
+      if (pathname === href) {
+        return
       }
       
-      navigate()
+      try {
+        router.push(href)
+      } catch (error) {
+        console.error('Router push failed, using window.location:', error)
+        window.location.href = href
+      }
     },
-    [router, pathname, isReady],
+    [router, pathname],
   )
 
   const handleLogout = useCallback(async () => {
@@ -86,14 +77,13 @@ export function Navigation() {
       isActive(item.href)
         ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
         : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-    } ${!isReady ? "opacity-50 pointer-events-none" : ""}`
+    }`
 
     if (mobile) {
       return (
         <button 
           onClick={() => handleNavigation(item.href)} 
           className={linkClasses}
-          disabled={!isReady}
         >
           <item.icon className="h-5 w-5" />
           <span>{item.name}</span>
@@ -106,42 +96,33 @@ export function Navigation() {
       )
     }
 
-    // For desktop, use both Link and onClick handler for maximum compatibility
+    // For desktop, use Link with proper onClick handler
     return (
-      <div className={linkClasses}>
-        <Link 
-          href={item.href} 
-          className="flex items-center space-x-3 w-full"
-          onClick={(e) => {
-            if (!isReady) {
-              e.preventDefault()
-              return
-            }
-            // Let the Link handle it, but also call our handler as backup
-            handleNavigation(item.href)
-          }}
-          prefetch={true}
-        >
-          <item.icon className="h-5 w-5" />
-          <span>{item.name}</span>
-          {item.badge && (
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {item.badge}
-            </Badge>
-          )}
-        </Link>
-      </div>
+      <Link 
+        href={item.href} 
+        className={linkClasses}
+        onClick={(e) => {
+          e.preventDefault()
+          handleNavigation(item.href)
+        }}
+      >
+        <item.icon className="h-5 w-5" />
+        <span>{item.name}</span>
+        {item.badge && (
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {item.badge}
+          </Badge>
+        )}
+      </Link>
     )
   }
 
-  // Don't render navigation if user is not authenticated
   if (!user) {
     return null
   }
 
   return (
     <>
-      {/* Desktop Navigation */}
       <nav className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col z-40">
         <div className="p-6">
           <Link href="/dashboard" className="flex items-center space-x-2">
@@ -153,7 +134,6 @@ export function Navigation() {
         </div>
 
         <div className="flex-1 px-4 space-y-6 overflow-y-auto">
-          {/* Main Navigation */}
           <div>
             <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Trading
@@ -165,7 +145,6 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Account Section */}
           <div>
             <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Account
@@ -177,7 +156,6 @@ export function Navigation() {
             </div>
           </div>
 
-          {/* Support Section */}
           <div>
             <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
               Support
@@ -190,7 +168,6 @@ export function Navigation() {
           </div>
         </div>
 
-        {/* User Section */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-800">
           <div className="flex items-center space-x-3 mb-4">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
@@ -210,7 +187,6 @@ export function Navigation() {
         </div>
       </nav>
 
-      {/* Mobile Navigation */}
       <div className="lg:hidden">
         <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">
           <div className="flex items-center justify-between">
@@ -263,7 +239,6 @@ export function Navigation() {
                       </div>
                     </div>
 
-                    {/* Account Section */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                         Account
@@ -275,7 +250,6 @@ export function Navigation() {
                       </div>
                     </div>
 
-                    {/* Support Section */}
                     <div>
                       <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
                         Support
