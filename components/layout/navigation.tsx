@@ -1,285 +1,220 @@
-import { useState, useCallback, useEffect } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+"use client"
+
+import { useState } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { useAuth } from "@/components/providers/auth-provider"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Badge } from "@/components/ui/badge"
-import {  Menu,  Home,  TrendingUp,  Wallet,  BarChart3,  Settings,  User, Shield,  HelpCircle,  Mail,  FileText,  Newspaper,  PieChart,  Users,  Lock,  X,} from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ThemeSwitcher } from "@/components/theme/theme-switcher"
-import { useAuth } from "@/components/providers/auth-provider"
+import {
+  Menu,
+  Home,
+  TrendingUp,
+  Wallet,
+  BarChart3,
+  Settings,
+  User,
+  LogOut,
+  Bell,
+  Search,
+  HelpCircle,
+  Shield,
+  FileText,
+  Phone,
+  Gift,
+} from "lucide-react"
+
+const navigationItems = [
+  { name: "Dashboard", href: "/dashboard", icon: Home },
+  { name: "Trade", href: "/trade", icon: TrendingUp },
+  { name: "Markets", href: "/markets", icon: BarChart3 },
+  { name: "Wallet", href: "/wallet", icon: Wallet },
+  { name: "Analytics", href: "/analytics", icon: BarChart3 },
+  { name: "Profile", href: "/profile", icon: User },
+  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Security", href: "/security", icon: Shield },
+  { name: "KYC", href: "/kyc", icon: FileText },
+  { name: "Referrals", href: "/referrals", icon: Gift },
+  { name: "Help", href: "/help", icon: HelpCircle },
+  { name: "Contact", href: "/contact", icon: Phone },
+]
 
 export function Navigation() {
-  const [isOpen, setIsOpen] = useState(false)
-  const pathname = usePathname()
   const router = useRouter()
+  const pathname = usePathname()
   const { user, logout } = useAuth()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const navigationItems = [
-    { name: "Dashboard", href: "/dashboard", icon: Home },
-    { name: "Trade", href: "/trade", icon: TrendingUp },
-    { name: "Wallet", href: "/wallet", icon: Wallet },
-    { name: "Markets", href: "/markets", icon: BarChart3 },
-    { name: "Analytics", href: "/analytics", icon: PieChart },
-    { name: "News", href: "/news", icon: Newspaper },
-  ]
+  const handleNavigation = (href: string) => {
+    console.log("Navigating to:", href)
+    console.log("Current pathname:", pathname)
 
-  const accountItems = [
-    { name: "Profile", href: "/profile", icon: User },
-    { name: "KYC Verification", href: "/kyc", icon: Shield, badge: "Pending" },
-    { name: "Referrals", href: "/referrals", icon: Users },
-    { name: "Security", href: "/security", icon: Lock },
-    { name: "Settings", href: "/settings", icon: Settings },
-  ]
-
-  const supportItems = [
-    { name: "Help Center", href: "/help", icon: HelpCircle },
-    { name: "Contact", href: "/contact", icon: Mail },
-    { name: "API Docs", href: "/api", icon: FileText },
-  ]
-
-  const isActive = (href: string) => pathname === href
-
-  const handleNavigation = useCallback(
-    (href: string) => {
-      console.log('Navigating to:', href, 'Current:', pathname)
-      setIsOpen(false)
-      
-      // Don't navigate if already on the same page
-      if (pathname === href) {
-        return
-      }
-      
-      try {
-        router.push(href)
-      } catch (error) {
-        console.error('Router push failed, using window.location:', error)
-        window.location.href = href
-      }
-    },
-    [router, pathname],
-  )
-
-  const handleLogout = useCallback(async () => {
-    setIsOpen(false)
     try {
-      await logout()
-      // Use window.location for logout to ensure clean navigation
-      window.location.href = "/auth/login"
+      router.push(href)
+      setIsMobileMenuOpen(false) // Close mobile menu after navigation
     } catch (error) {
-      console.error("Logout failed:", error)
-      // Fallback to router if logout fails
-      router.push("/auth/login")
+      console.error("Navigation error:", error)
     }
-  }, [logout, router])
-
-  const NavLink = ({ item, mobile = false }: { item: any; mobile?: boolean }) => {
-    const linkClasses = `flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors w-full text-left ${
-      isActive(item.href)
-        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-        : "text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
-    }`
-
-    if (mobile) {
-      return (
-        <button 
-          onClick={() => handleNavigation(item.href)} 
-          className={linkClasses}
-        >
-          <item.icon className="h-5 w-5" />
-          <span>{item.name}</span>
-          {item.badge && (
-            <Badge variant="secondary" className="ml-auto text-xs">
-              {item.badge}
-            </Badge>
-          )}
-        </button>
-      )
-    }
-
-    // For desktop, use Link with proper onClick handler
-    return (
-      <Link 
-        href={item.href} 
-        className={linkClasses}
-        onClick={(e) => {
-          e.preventDefault()
-          handleNavigation(item.href)
-        }}
-      >
-        <item.icon className="h-5 w-5" />
-        <span>{item.name}</span>
-        {item.badge && (
-          <Badge variant="secondary" className="ml-auto text-xs">
-            {item.badge}
-          </Badge>
-        )}
-      </Link>
-    )
   }
 
-  if (!user) {
-    return null
+  const handleLogout = async () => {
+    try {
+      await logout()
+      router.push("/")
+    } catch (error) {
+      console.error("Logout error:", error)
+    }
+  }
+
+  const isActive = (href: string) => {
+    return pathname === href
   }
 
   return (
-    <>
-      <nav className="hidden lg:flex fixed left-0 top-0 h-full w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex-col z-40">
-        <div className="p-6">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">OC</span>
+    <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          {/* Logo and Desktop Navigation */}
+          <div className="flex items-center">
+            <div className="flex-shrink-0 flex items-center">
+              <TrendingUp className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white">CryptoEx</span>
             </div>
-            <span className="text-xl font-bold text-gray-900 dark:text-white">Exchange</span>
-          </Link>
-        </div>
 
-        <div className="flex-1 px-4 space-y-6 overflow-y-auto">
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Trading
-            </h3>
-            <div className="space-y-1">
-              {navigationItems.map((item) => (
-                <NavLink key={item.name} item={item} />
-              ))}
+            {/* Desktop Navigation */}
+            <div className="hidden md:ml-6 md:flex md:space-x-1">
+              {navigationItems.slice(0, 5).map((item) => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => handleNavigation(item.href)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center space-x-2 ${
+                      isActive(item.href)
+                        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.name}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Account
-            </h3>
-            <div className="space-y-1">
-              {accountItems.map((item) => (
-                <NavLink key={item.name} item={item} />
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              Support
-            </h3>
-            <div className="space-y-1">
-              {supportItems.map((item) => (
-                <NavLink key={item.name} item={item} />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-          <div className="flex items-center space-x-3 mb-4">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-sm font-medium">{user?.name?.charAt(0) || "U"}</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.name || "User"}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email || "user@example.com"}</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <ThemeSwitcher />
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              Logout
+          {/* Right side items */}
+          <div className="flex items-center space-x-4">
+            {/* Search */}
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+              <Search className="h-5 w-5" />
             </Button>
-          </div>
-        </div>
-      </nav>
 
-      <div className="lg:hidden">
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">OC</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900 dark:text-white">Exchange</span>
-            </Link>
+            {/* Notifications */}
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+              <Bell className="h-5 w-5" />
+            </Button>
 
-            <div className="flex items-center space-x-2">
-              <ThemeSwitcher />
-              <Sheet open={isOpen} onOpenChange={setIsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="w-80">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-semibold">Navigation</h2>
-                    <Button variant="ghost" size="sm" onClick={() => setIsOpen(false)}>
-                      <X className="h-4 w-4" />
-                    </Button>
+            {/* Theme Switcher */}
+            <ThemeSwitcher />
+
+            {/* User Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                    <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    <p className="font-medium">{user?.name}</p>
+                    <p className="w-[200px] truncate text-sm text-muted-foreground">{user?.email}</p>
+                  </div>
+                </div>
+                <div className="border-t my-1" />
+                {navigationItems.slice(5).map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <DropdownMenuItem
+                      key={item.name}
+                      onClick={() => handleNavigation(item.href)}
+                      className="cursor-pointer"
+                    >
+                      <Icon className="mr-2 h-4 w-4" />
+                      <span>{item.name}</span>
+                    </DropdownMenuItem>
+                  )
+                })}
+                <div className="border-t my-1" />
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Mobile menu button */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+                <div className="flex flex-col space-y-4 mt-4">
+                  <div className="flex items-center space-x-2 pb-4 border-b">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={user?.avatar || "/placeholder.svg"} alt={user?.name} />
+                      <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium">{user?.name}</p>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    </div>
                   </div>
 
-                  <div className="space-y-6">
-                    {/* User Info */}
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium">{user?.name?.charAt(0) || "U"}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 dark:text-white truncate">{user?.name || "User"}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                          {user?.email || "user@example.com"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Main Navigation */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                        Trading
-                      </h3>
-                      <div className="space-y-1">
-                        {navigationItems.map((item) => (
-                          <NavLink key={item.name} item={item} mobile />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                        Account
-                      </h3>
-                      <div className="space-y-1">
-                        {accountItems.map((item) => (
-                          <NavLink key={item.name} item={item} mobile />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-                        Support
-                      </h3>
-                      <div className="space-y-1">
-                        {supportItems.map((item) => (
-                          <NavLink key={item.name} item={item} mobile />
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Logout */}
-                    <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <Button variant="outline" className="w-full bg-transparent" onClick={handleLogout}>
-                        Logout
-                      </Button>
-                    </div>
+                  {/* Mobile Navigation Items */}
+                  <div className="space-y-2">
+                    {navigationItems.map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <button
+                          key={item.name}
+                          onClick={() => handleNavigation(item.href)}
+                          className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-colors duration-200 ${
+                            isActive(item.href)
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-700"
+                          }`}
+                        >
+                          <Icon className="h-5 w-5" />
+                          <span>{item.name}</span>
+                        </button>
+                      )
+                    })}
                   </div>
-                </SheetContent>
-              </Sheet>
-            </div>
+
+                  <div className="border-t pt-4">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors duration-200"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      <span>Log out</span>
+                    </button>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
-
-        {/* Spacer for fixed header */}
-        <div className="h-16" />
       </div>
-
-      {/* Main content spacer for desktop */}
-      <div className="hidden lg:block w-64" />
-    </>
+    </nav>
   )
 }

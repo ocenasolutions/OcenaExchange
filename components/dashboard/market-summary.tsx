@@ -1,65 +1,72 @@
 "use client"
 
+import { useState } from "react"
 import { TrendingUp, TrendingDown } from "lucide-react"
-import Link from "next/link"
 
-interface MarketSummaryProps {
-  data: Array<{
-    symbol: string
-    price: string
-    change: string
-    volume: string
-  }>
+interface MarketData {
+  symbol: string
+  name: string
+  price: number
+  change24h: number
+  volume: number
 }
 
-export function MarketSummary({ data }: MarketSummaryProps) {
-  const defaultData = [
-    { symbol: "BTCUSDT", price: "43250.00", change: "2.45", volume: "1234567" },
-    { symbol: "ETHUSDT", price: "2650.00", change: "-1.23", volume: "987654" },
-    { symbol: "BNBUSDT", price: "320.50", change: "0.87", volume: "456789" },
-  ]
-
-  const marketData = data.length > 0 ? data : defaultData
+export function MarketSummary() {
+  const [marketData, setMarketData] = useState<MarketData[]>([
+    {
+      symbol: "BTC",
+      name: "Bitcoin",
+      price: 44327.6,
+      change24h: -0.68,
+      volume: 558954,
+    },
+    {
+      symbol: "ETH",
+      name: "Ethereum",
+      price: 45485.06,
+      change24h: 4.43,
+      volume: 437624,
+    },
+    {
+      symbol: "BNB",
+      name: "BNB",
+      price: 51754.29,
+      change24h: 2.24,
+      volume: 847434,
+    },
+  ])
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Market Summary</h2>
-        <Link href="/markets" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          View All
-        </Link>
-      </div>
-
-      <div className="space-y-4">
-        {marketData.map((item) => (
-          <div
-            key={item.symbol}
-            className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
-          >
-            <div>
-              <div className="font-medium text-gray-900 dark:text-white">{item.symbol}</div>
-              <div className="text-sm text-gray-500">Vol: {Number.parseFloat(item.volume).toLocaleString()}</div>
+    <div className="space-y-4">
+      {marketData.map((coin) => (
+        <div key={coin.symbol} className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+              {coin.symbol.slice(0, 2)}
             </div>
-            <div className="text-right">
-              <div className="font-medium text-gray-900 dark:text-white">
-                ${Number.parseFloat(item.price).toLocaleString()}
-              </div>
-              <div
-                className={`text-sm flex items-center ${
-                  Number.parseFloat(item.change) >= 0 ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {Number.parseFloat(item.change) >= 0 ? (
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                ) : (
-                  <TrendingDown className="h-3 w-3 mr-1" />
-                )}
-                {Number.parseFloat(item.change) >= 0 ? "+" : ""}
-                {item.change}%
-              </div>
+            <div>
+              <p className="font-medium text-sm">{coin.symbol.toLowerCase()}</p>
+              <p className="text-xs text-gray-500">Vol: {coin.volume.toLocaleString()}</p>
             </div>
           </div>
-        ))}
+          <div className="text-right">
+            <p className="font-medium text-sm">${coin.price.toLocaleString()}</p>
+            <div className="flex items-center space-x-1">
+              {coin.change24h >= 0 ? (
+                <TrendingUp className="h-3 w-3 text-green-500" />
+              ) : (
+                <TrendingDown className="h-3 w-3 text-red-500" />
+              )}
+              <span className={`text-xs ${coin.change24h >= 0 ? "text-green-500" : "text-red-500"}`}>
+                {coin.change24h >= 0 ? "+" : ""}
+                {coin.change24h}%
+              </span>
+            </div>
+          </div>
+        </div>
+      ))}
+      <div className="pt-2 border-t">
+        <button className="text-blue-600 text-sm hover:underline">View All</button>
       </div>
     </div>
   )
